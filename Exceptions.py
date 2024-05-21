@@ -1,0 +1,3 @@
+
+class OutofIndexError(Exception):
+    pass
