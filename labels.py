@@ -132,11 +132,12 @@ new_labels = [
 ]
 '''
 
-mylabels = {'large vehicle': 0, 'person': 1, 'train': 2, 'bicycle': 3, 'motorcycle': 4, 'rider': 1, 'car': 5, 'sky': 6, 'building': 7, 'pole': 8,
+mylabels = {'truck': 0, 'person': 1, 'train': 2, 'bicycle': 3, 'motorcycle': 4, 'rider': 1, 'car': 5, 'sky': 6, 'building': 7, 'pole': 8,
 'road': 9, 'sidewalk': 10, 'vegetation': 11, 'traffic sign': 12, 'fence': 13, 'unknown': 14, 'ground':15}
 mynames = {0: 'truck', 1: 'person', 2: 'train', 3: 'bicycle', 4: 'motorcycle', 5: 'car', 6: 'sky', 7: 'building', 8: 'pole', 9: 'road', 10: 'sidewalk', 11: 'vegetation', 12: 'traffic sign', 13: 'fence', 14: 'unknown', 15: 'ground'}
+names2mynames = {'bus': 'truck', 'caravan': 'truck', 'trailer' : 'truck', 'truck': 'truck', 'person': 'person', 'rider' : 'person'}
 
-# bus, caravan, trailer, truck --> large vehicle
+# bus, caravan, trailer, truck --> 'truck'
 # person, rider --> person
 
 

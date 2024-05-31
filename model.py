@@ -4,6 +4,9 @@ import torch.nn.functional as F
 import torchvision.models as models  
 import numpy as np
 from Exceptions import OutofIndexError
+from torchvision.models import vgg16_bn
+from torchvision.models import VGG16_BN_Weights
+
 
 class Encoder(nn.Module):
 
@@ -12,59 +15,72 @@ class Encoder(nn.Module):
         self.layer1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(64),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer2 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(64),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer3 = nn.MaxPool2d(kernel_size = 2, stride = 2, return_indices=True)
         self.layer4 = nn.Sequential(
             nn.Conv2d(64, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer5 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer6 = nn.MaxPool2d(kernel_size = 2, stride = 2, return_indices=True)
         self.layer7 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer8 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer9 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer10 = nn.MaxPool2d(kernel_size = 2, stride = 2, return_indices=True)
         self.layer11 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer12 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer13 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer14 = nn.MaxPool2d(kernel_size = 2, stride = 2, return_indices=True)
         self.layer15 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer16 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer17 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer18 = nn.MaxPool2d(kernel_size = 2, stride = 2, return_indices=True)
         '''
         torch.nn.init.normal_(self.layer1.weight, mean=0, std=1)
@@ -192,63 +208,77 @@ class Decoder(nn.Module):
         self.layer2 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer3 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer4 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer5 = nn.MaxUnpool2d(kernel_size = 2, stride = 2)
         self.layer6 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer7 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer8 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer9 = nn.MaxUnpool2d(kernel_size = 2, stride = 2)
         self.layer10 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer11 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer12 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer13 = nn.MaxUnpool2d(kernel_size = 2, stride = 2)
         self.layer14 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer15 = nn.Sequential(
             nn.Conv2d(128, 128, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(128),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer16 = nn.Sequential(
             nn.Conv2d(128, 64, kernel_size=1, stride=1, padding=0),
             nn.BatchNorm2d(64),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer17 = nn.MaxUnpool2d(kernel_size = 2, stride = 2)
         self.layer18 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(64),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         self.layer19 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=kernel_size, stride=1, padding=padding),
             nn.BatchNorm2d(64),
-            nn.ReLU())
+            #nn.ReLU())
+            nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
         ''' 
         torch.nn.init.normal_(self.layer1.weight, mean=0, std=1)
         torch.nn.init.normal_(self.layer2.weight, mean=0, std=1)
@@ -376,8 +406,11 @@ class Decoder(nn.Module):
 class ClassifyBlock(nn.Module):
     def __init__(self, in_channels, out_channels, hidden_layers1, hidden_layers2):
         super(ClassifyBlock, self).__init__()
-        self.layer = nn.Sequential(nn.Linear(in_channels, hidden_layers1), nn.ReLU(), 
-        nn.Linear(hidden_layers1, hidden_layers2), nn.ReLU(), nn.Linear(hidden_layers2, out_channels))
+        #self.layer = nn.Sequential(nn.Linear(in_channels, hidden_layers1), nn.ReLU(), 
+        #nn.Linear(hidden_layers1, hidden_layers2), nn.ReLU(), nn.Linear(hidden_layers2, out_channels))
+        #self.layer = nn.Sequential(nn.Linear(in_channels, hidden_layers1), nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None), 
+        #nn.Linear(hidden_layers1, hidden_layers2), nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None), nn.Linear(hidden_layers2, out_channels))
+        self.layer = nn.Conv2d(64, 16, kernel_size=1, stride=1, padding=0)
         self.layerprob = nn.Softmax(dim=1)
         '''
         torch.nn.init.normal_(self.layer.weight, mean=0, std=1)
@@ -388,18 +421,20 @@ class ClassifyBlock(nn.Module):
         #print('ClassifyBlock: ')
         #y = torch.clone(x)
         #print('x shape: ', x.shape)
-        x = torch.permute(x, (0,2,3,1))
+        #x = torch.permute(x, (0,2,3,1))
         #print('x shape: ', x.shape)
         out = self.layer(x)   
         #print('out shape: ', out.shape)
         #print('breakpoint 1:' )
         #breakpoint()
-        out = torch.permute(out, (0,3,1,2))
+        #out = torch.permute(out, (0,3,1,2))
         #print('out shape: ', out.shape)
         #print('breakpoint 2:' )
         #breakpoint()
         out = self.layerprob(out)
         #print('out shape: ', out.shape)
+        #print('out[0,:,0,10]: ', out[0,:,0:2,10])
+        #print('torch.sum(out[0,:,0,10]): ', torch.sum(out[0,:,0,10]))
         #print('breakpoint 3:' )
         #breakpoint()
         return out
@@ -410,6 +445,7 @@ class Segnet(nn.Module):
         self.Encoder = Encoder(kernel_size, padding)
         self.Decoder = Decoder(kernel_size, padding)
         self.ClassifyBlock = ClassifyBlock(64,out_channels,200,200)
+        self.upsamplefromvgg = torch.nn.Upsample(size=(7,7), mode='bilinear')
 
     def forward(self, x):
         #print('breakpoint before encoder: ')
@@ -424,3 +460,41 @@ class Segnet(nn.Module):
         #print('breakpoint after ClassifyBlock: ')
         #breakpoint()
         return out
+
+    def initialize_Encoder(self):
+        model = vgg16_bn(weights=VGG16_BN_Weights.IMAGENET1K_V1)
+        self.Encoder.layer1[0].weight.data.copy_(self.upsamplefromvgg(model.features[0].weight.data))
+        self.Encoder.layer1[0].bias.data.copy_(model.features[0].bias.data)
+        self.Encoder.layer2[0].weight.data.copy_(self.upsamplefromvgg(model.features[3].weight.data))
+        self.Encoder.layer2[0].bias.data.copy_(model.features[3].bias.data)
+        self.Encoder.layer4[0].weight.data.copy_(self.upsamplefromvgg(model.features[7].weight.data))
+        self.Encoder.layer4[0].bias.data.copy_(model.features[7].bias.data)
+        self.Encoder.layer5[0].weight.data.copy_(self.upsamplefromvgg(model.features[10].weight.data))
+        self.Encoder.layer5[0].bias.data.copy_(model.features[10].bias.data)
+        self.Encoder.layer7[0].weight.data.copy_(self.upsamplefromvgg(model.features[14].weight.data[0::2,:,:,:]))
+        self.Encoder.layer7[0].bias.data.copy_(model.features[14].bias.data[0::2])
+        self.Encoder.layer8[0].weight.data.copy_(self.upsamplefromvgg(model.features[17].weight.data[0::2,0::2,:,:]))
+        self.Encoder.layer8[0].bias.data.copy_(model.features[17].bias.data[0::2])
+        self.Encoder.layer9[0].weight.data.copy_(self.upsamplefromvgg(model.features[20].weight.data[0::2,0::2,:,:]))
+        self.Encoder.layer9[0].bias.data.copy_(model.features[20].bias.data[0::2])
+        self.Encoder.layer11[0].weight.data.copy_(self.upsamplefromvgg(model.features[24].weight.data[0::4,0::2,:,:]))
+        self.Encoder.layer11[0].bias.data.copy_(model.features[24].bias.data[0::4])
+        self.Encoder.layer12[0].weight.data.copy_(self.upsamplefromvgg(model.features[27].weight.data[0::4,0::4,:,:]))
+        self.Encoder.layer12[0].bias.data.copy_(model.features[27].bias.data[0::4])
+        self.Encoder.layer13[0].weight.data.copy_(self.upsamplefromvgg(model.features[30].weight.data[0::4,0::4,:,:]))
+        self.Encoder.layer13[0].bias.data.copy_(model.features[30].bias.data[0::4])
+        self.Encoder.layer15[0].weight.data.copy_(self.upsamplefromvgg(model.features[34].weight.data[0::4,0::4,:,:]))
+        self.Encoder.layer15[0].bias.data.copy_(model.features[34].bias.data[0::4])
+        self.Encoder.layer16[0].weight.data.copy_(self.upsamplefromvgg(model.features[37].weight.data[0::4,0::4,:,:]))
+        self.Encoder.layer16[0].bias.data.copy_(model.features[37].bias.data[0::4])
+        self.Encoder.layer17[0].weight.data.copy_(self.upsamplefromvgg(model.features[40].weight.data[0::4,0::4,:,:]))
+        self.Encoder.layer17[0].bias.data.copy_(model.features[40].bias.data[0::4])
+
+
+weight_dict = {'Encoder.layer1.0.weight': 'features.0.weight', 'Encoder.layer1.0.bias': 'features.0.bias', 'Encoder.layer2.0.weight': 'features.3.weight', 'Encoder.layer2.0.bias': 'features.3.bias',
+'Encoder.layer4.0.weight' : 'features.7.weight', 'Encoder.layer4.0.bias' : 'features.7.bias', 'Encoder.layer5.0.weight' : 'features.10.weight', 'Encoder.layer5.0.bias' : 'features.10.bias', 
+'Encoder.layer7.0.weight' : 'features.14.weight', 'Encoder.layer7.0.bias' : 'features.14.bias', 'Encoder.layer8.0.weight' : 'features.17.weight', 'Encoder.layer8.0.bias' : 'features.17.bias',
+'Encoder.layer9.0.weight' : 'features.20.weight', 'Encoder.layer9.0.bias' : 'features.20.bias', 'Encoder.layer11.0.weight' : 'features.24.weight', 'Encoder.layer11.0.bias' : 'features.24.bias',
+'Encoder.layer12.0.weight' : 'features.27.weight', 'Encoder.layer12.0.bias' : 'features.27.bias', 'Encoder.layer13.0.weight' : 'features.30.weight', 'Encoder.layer13.0.bias' : 'features.30.bias',
+'Encoder.layer15.0.weight' : 'features.34.weight', 'Encoder.layer15.0.bias' : 'features.34.bias', 'Encoder.layer16.0.weight' : 'features.34.weight', 'Encoder.layer16.0.bias' : 'features.34.bias',
+'Encoder.layer17.0.weight' : 'features.37.weight', 'Encoder.layer17.0.bias' : 'features.37.bias'}
