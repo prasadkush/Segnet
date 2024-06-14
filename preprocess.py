@@ -7,9 +7,10 @@ import torch
 from itertools import cycle
 
 
-def get_mean(datapath=None):
-	datapath = 'C:/Users/Kush/OneDrive/Desktop/CV-Ml/datasets/data_semantics/training'
-	dataset = getDataset(datapath)
+def get_mean(datapath=None, dataset='kitti'):
+	#datapath = 'C:/Users/Kush/OneDrive/Desktop/CV-Ml/datasets/data_semantics/training'
+	#datapathcam = 'C:/Users/Kush/OneDrive/Desktop/CV-ML/datasets/SegNet-Tutorial-master/SegNet-Tutorial-master/CamVid'
+	dataset = getDataset(datapath=datapath, dataset=dataset)
 	size_data = len(dataset)
 	loader = DataLoader(dataset, batch_size=1, shuffle=False, pin_memory=True)
 	loaderiter = iter(loader)
@@ -19,6 +20,7 @@ def get_mean(datapath=None):
 	for i in range(size_data):
 		data = next(loaderiter)
 		d = data['image'].numpy()[0,:,:,:]
+		d = d.transpose((1,2,0))
 		if i == 0:
 			imgh = d.shape[0]
 			imgw = d.shape[1]
@@ -36,16 +38,18 @@ def get_mean(datapath=None):
 	#print('mean/255: ', mean/255)
 
 
-def get_std(datapath=None, mean=None):
-	datapath = 'C:/Users/Kush/OneDrive/Desktop/CV-Ml/datasets/data_semantics/training'
-	mean, dataset, loader = get_mean(datapath)
+def get_std(datapath=None, mean=None, dataset='kitti'):
+	#datapath = 'C:/Users/Kush/OneDrive/Desktop/CV-Ml/datasets/data_semantics/training'
+	mean, dataset, loader = get_mean(datapath, dataset=dataset)
 	loaderiter = iter(cycle(loader))
+	size_data = len(dataset)
 	imgh = 0
 	imgw = 0
 	meanstdimg = 0
 	for i in range(size_data):
 		data = next(loaderiter)
 		d = data['image'].numpy()[0,:,:,:]
+		d = d.transpose((1,2,0))
 		if i == 0:
 			imgh = d.shape[0]
 			imgw = d.shape[1]
@@ -75,9 +79,15 @@ def get_mean_std(dataset_name='kitti'):
     if dataset_name == 'kitti':
     	mean = np.array([0.38399986, 0.39878138, 0.3793309 ])
     	std  = np.array([0.32906724, 0.31968708, 0.31093021])
+    elif dataset_name == 'CamVid':
+    	mean = np.array([0.4326707, 0.4251328, 0.41189488])
+    	std = np.array([0.30721843, 0.31161108, 0.3070735])
     	return mean, std
 
 #for kitti
 #mean:  [0.38399986 0.39878138 0.3793309 ]
 #std:  [0.32906724 0.31968708 0.31093021]
 
+#CamVid
+#std:  [0.30721843 0.31161108 0.3070735 ]
+#mean:  [0.4326707  0.4251328  0.41189488]

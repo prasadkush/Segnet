@@ -7,10 +7,10 @@ from torch.utils.data import DataLoader, Dataset
 from model import Encoder, Segnet
 import matplotlib.pyplot as plt
 import numpy as np
-from config import datapath
+from config import datapath, datapathcam
 import pickle
 import pdb
-from predict import predict_single_image
+from predict import predict_single_image, compute_accuracy, compute_intersection_union
 from Exceptions import ModelPathrequiredError
 from torchvision.models import vgg16_bn
 
@@ -51,7 +51,7 @@ def weights_init(m):
 
 
 def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=False, val_dataset=None, modelpath=None, bestmodelpath=None, resume_training=False, useWeights=False, resultsdir=None, pretrained_encoder=True,
-    layer_wise_training=True):
+    layer_wise_training=False):
 
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
@@ -68,11 +68,10 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
 
 
     if val_dataset == None:
-        val_dataset = getDataset(datapath)
+        val_dataset = getDataset(datapathcam, dataset='CamVid', data_augment=False, gt_present=True, mode='val')
 
-    lr_initial = 0.001
-    lr_new = 0.001
-
+    lr_initial = 0.03
+    lr_new = 0.03
     if resume_training == False and pretrained_encoder == False:
         model.apply(weights_init)
     elif resume_training == False and pretrained_encoder == True:
@@ -81,20 +80,29 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
         model.ClassifyBlock.apply(weights_init)
     print('after model.apply')
     #optimizer = optim.Adam(model.parameters(), lr=lr_initial, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
-    optimizer = optim.SGD(model.parameters(), lr=lr_initial,  momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=lr_initial,  momentum=0.9, nesterov=True)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, pin_memory=True)
 
-    batch_size_val = 4
+    batch_size_val = 8
     loader_val = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True)
     loaderiter_val = iter(loader_val)
     num_val = 0
+    compute_val_over_whole_data = False
 
     start_epoch = 0
     loss = 0
     best_loss = 100000
     total_loss = 0
     training_loss_list = []
-    mean_list = []
+    #mean_list = []
+    pixelacclist = []
+    mean_ioulist = []
+    pixelacc_val_list = []
+    meaniou_val_list = []
+    loss_val_list = []
+    epochs = 46
+    lr_schedule = [lr_initial, 0.01, 0.005, 0.001]
+    lr_milestones = [12, 24, 34, epochs]
 
     if resume_training == True and modelpath != None:
         checkpoint = torch.load(modelpath)
@@ -107,16 +115,28 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
         else:
             best_loss = checkpoint['loss']
         start_epoch = epoch + 1
+        ind_sch = np.searchsorted(np.array(lr_milestones), start_epoch, side='right')
+        lr_new = lr_schedule[ind_sch]
 
-        with open('results/trial1/training_loss_list.pkl', 'rb') as f:
+        with open(resultsdir + '/training_loss_list.pkl', 'rb') as f:
             training_loss_list = pickle.load(f)
-        with open('results/trial1/mean_list.pkl', 'rb') as f:
-            mean_list = pickle.load(f)
+        #with open(resultsdir + '/mean_list.pkl', 'rb') as f:
+        #    mean_list = pickle.load(f)
+        with open(resultsdir + '/pixelacclist.pkl', 'rb') as f:
+            pixelacclist = pickle.load(f)
+        with open(resultsdir + '/mean_ioulist.pkl', 'rb') as f:
+            mean_ioulist = pickle.load(f)
+        with open(resultsdir + '/meaniou_val_list.pkl', 'rb') as f:
+            meaniou_val_list = pickle.load(f)
+        with open(resultsdir + '/pixelacc_val_list.pkl', 'rb') as f:
+            pixelacc_val_list = pickle.load(f)
+        with open(resultsdir + '/loss_val_list.pkl', 'rb') as f:
+            loss_val_list = pickle.load(f)
     elif resume_training == True and modelpath == None:
         raise ModelPathrequiredError("Provide Model path if resume_training is set to True")
 
 
-    layers = ['Decoder.layer2', 'Decoder.layer3', 'Decoder.layer4']
+   # layers = ['Decoder.layer2', 'Decoder.layer3', 'Decoder.layer4', 'Encoder.layer15', 'Encoder.layer16', 'Encoder.layer17']
     if layer_wise_training == True:
         for name, param in model.named_parameters():
             ind = name.index('.')
@@ -142,13 +162,20 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
     print('start_epoch: ', start_epoch)
     print('best_loss: ', best_loss)
 
-    epochs = 24
+    #epochs = 46
     #lr_schedule = [lr_initial, lr_initial/2, lr_initial/5, lr_initial/10]
     #lr_milestones = [10, 20, 30, epochs]
-    lr_schedule = [lr_initial, lr_initial/10]
-    lr_milestones = [12, epochs]
+    #lr_schedule = [lr_initial, 0.01, 0.005, 0.001]
+    #lr_milestones = [12, 24, 34, epochs]
+    for g in optimizer.param_groups:
+                g['lr'] = lr_new
+    print('lr_schedule: ', lr_schedule)
+    print('lr_milestones: ', lr_milestones)
+    print('lr_new: ', lr_new)
+    print('resultsdir: ', resultsdir)
     #loaderiter = iter(loader)
     ind_sch = 0
+    num_classes = dataset.num_classes
     for e in range(start_epoch, epochs):
         print('epoch: ', e)
         '''
@@ -174,6 +201,10 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
 
         total_loss = 0
         model.train()
+        numimgs = 0
+        pixelacc = 0
+        intersect = np.zeros((dataset.num_classes,))
+        union = np.zeros((dataset.num_classes,))
         for i, data in enumerate(loader):
 
             print('epoch: ', e, ' i: ', i)
@@ -196,6 +227,11 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
             #cv2.waitKey(0)
             print('x shape: ', x.shape)
             #print('x: ', x)
+            with torch.no_grad():
+                inds = torch.argmax(x, dim=1)
+                pixelacc += np.sum(np.equal(inds.numpy(), ds.numpy()))/(inds.shape[1]*inds.shape[2])
+                compute_intersection_union(inds, ds, num_classes, intersect, union)
+                numimgs += x.shape[0]            
             x_logits = torch.logit(x,eps=1e-7) 
             #print('x_logits.shape')
             output = criterion(x_logits,ds)
@@ -208,9 +244,17 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
             total_loss = total_loss + batch_size*loss
 
 
-        training_loss = total_loss/len(dataset)
+        training_loss = total_loss/numimgs
         training_loss_list.append(training_loss)
         epoch_list = range(len(training_loss_list))
+        mean_iou = np.mean(intersect/union)
+        pixelacc = pixelacc/numimgs
+        print('training pixelacc: ', pixelacc)
+        print('training mean_iou: ', mean_iou)
+        print('training intersect/union: ', intersect/union)
+        print('training loss: ', training_loss)
+        pixelacclist.append(pixelacc)
+        mean_ioulist.append(mean_iou)
         if training_loss < best_loss:
             #path = 'results/trial0/bestlosssegnetmodelnew.pt'
             path = resultsdir + '/bestlosssegnetmodelnew.pt'
@@ -224,6 +268,11 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
 
         with open(resultsdir + '/training_loss_list.pkl', 'wb') as f:
             pickle.dump(training_loss_list, f)
+        with open(resultsdir + '/pixelacclist.pkl', 'wb') as f:
+            pickle.dump(pixelacclist, f)
+        with open(resultsdir + '/mean_ioulist.pkl', 'wb') as f:
+            pickle.dump(mean_ioulist, f)
+
         
         '''
         w1_en = model.Encoder.layer1[0].weight
@@ -248,20 +297,41 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
                 tensor_dict[name] = param
         torch.save(tensor_dict, resultsdir + '/params_e' + str(e) + '.pt')
 
-        if num_val >= 200:
-            data_val = next(cycle(loaderiter_val))
+        if compute_val_over_whole_data:
+            pixelacc_val, meaniou_val, val_loss, intersect_val, union_val = compute_accuracy(val_dataset, dataset_name='CamVid', imgdir=resultsdir + '/imgs', criterion=criterion, model=model, modelname='SegnetSkip3', gt_present=True, save_images=False, epoch=e) 
+            val_loss_list.append(val_loss)
+            intersect_union_val = intersect_val/union_val
+            print('pixelacc_val: ', pixelacc_val)
+            print('meaniou_val: ', meaniou_val)
+            print('val_loss: ', val_loss)
+            print('intersect_val/union_val: ', intersect_union_val)
+            with open(resultsdir + '/loss_val_list.pkl', 'wb') as f:
+                pickle.dump(loss_val_list, f)
         else:
-            data_val = next(loaderiter_val)
-        num_val = num_val + batch_size_val
-        img_val = data_val['image']
-        imgs_val = data_val['semantic']
-        imgorig_val = data_val['original']
-        with torch.no_grad():
-            mean = predict_single_image(img_val, imgs_val, imgorig_val, model=model, imgdir=resultsdir + '/imgs', epoch=e)
-        print('mean: ', mean)
-        mean_list.append(mean)
-        with open(resultsdir + '/mean_list.pkl', 'wb') as f:
-            pickle.dump(mean_list, f)
+            if num_val >= 200:
+                data_val = next(cycle(loaderiter_val))
+            else:
+                data_val = next(loaderiter_val)
+            num_val = num_val + batch_size_val
+            img_val = data_val['image']
+            imgs_val = data_val['semantic']
+            imgorig_val = data_val['original']
+            with torch.no_grad():
+                pixelacc_val, meaniou_val, intersect_val, union_val, loss_val = predict_single_image(img_val, imgs_val, imgorig_val, model=model, modelname='SegnetSkip3', dataset_name='CamVid', criterion=criterion, imgdir=resultsdir + '/imgs', epoch=e)
+            intersect_union_val = intersect_val/union_val
+            print('pixelacc_val: ', pixelacc_val)
+            print('meaniou_val: ', meaniou_val)
+            print('intersect_val/union_val: ',intersect_union_val)
+            print('loss_val: ', loss_val)
+        pixelacc_val_list.append(pixelacc_val)
+        meaniou_val_list.append(meaniou_val)
+        loss_val_list.append(loss_val)
+        with open(resultsdir + '/pixelacc_val_list.pkl', 'wb') as f:
+            pickle.dump(pixelacc_val_list, f)
+        with open(resultsdir + '/meaniou_val_list.pkl', 'wb') as f:
+            pickle.dump(meaniou_val_list, f)
+        with open(resultsdir + '/loss_val_list.pkl', 'wb') as f:
+            pickle.dump(loss_val_list, f)
         #plt.plot(epoch_list, training_loss_list)
         #plt.xlabel('epochs')
         #plt.ylabel('training loss')

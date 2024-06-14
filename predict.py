@@ -6,42 +6,47 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, utils
 from torch import optim
 from model import Encoder, Segnet
+from modelv2 import Segnet as SegnetSkip
+from modelv3 import Segnet as SegnetSkip3
 import matplotlib.pyplot as plt
 import numpy as np
 from preprocess import get_mean_std
 from labels import mylabels, mynames, name2label
 import os
 import pdb
+import time
+from test_segmentation_camvid import label_colours
 
 from labels import Label, id2myid, id2label, names2mynames
 
 def getmyids():
-    myids = np.zeros((34,))
-    for i in range(34):
-        name = id2label[i].name
-        if name in list(mylabels.keys()):
-            myids[i] = mylabels[name]
-        elif name in list(names2mynames.keys()):
-            namekey = names2mynames[name]
-            myids[i] = mylabels[namekey] 
-        else:
-            myids[i] = 14
-    return myids
-
-def get_my_colors():
-	max_index = max(list(mylabels.values()))
-	print('max_index: ', max_index)
-	color_arr = np.zeros((max_index+1,3))
-	for i in range(max_index):
-		name = mynames[i]
-		color = np.array([0,0,0])
-		if name == 'unknown':
-		    color = np.array([0,0,0])
+	myids = np.zeros((34,))
+	for i in range(34):
+		name = id2label[i].name
+		if name in list(mylabels.keys()):
+			myids[i] = mylabels[name]
+		elif name in list(names2mynames.keys()):
+			namekey = names2mynames[name]
+			myids[i] = mylabels[namekey] 
 		else:
-			color = name2label[name].color
-			color = np.array(list(color)).reshape((1,3))
-		color_arr[i,:] = color
-		print('i: ', i, ' color: ', color_arr[i,:])
+			myids[i] = 14
+	return myids
+
+def get_my_colors(dataset_name):
+	if dataset_name == 'kitti':
+		max_index = max(list(mylabels.values()))
+		print('max_index: ', max_index)
+		color_arr = np.zeros((max_index+1,3))
+		for i in range(max_index):
+			name = mynames[i]
+			color = np.array([0,0,0])
+			if name == 'unknown':
+				color = np.array([0,0,0])
+			else:
+				color = name2label[name].color
+				color = np.array(list(color)).reshape((1,3))
+			color_arr[i,:] = color
+			print('i: ', i, ' color: ', color_arr[i,:])
 	return color_arr
 
 
@@ -96,7 +101,7 @@ def predict(img, imgs, imginds, modelpath):
 	print('color_arr[inds] shape: ', color_arr[inds].shape)
 	print('color_arr[inds]: ', color_arr[inds])
 
-def predict_single_image(img, imgs, imgorig, modelpath=None, model=None, imgdir='results', optimizer=None, epoch=None):
+def predict_single_image(img, imgs, imgorig, modelpath=None, model=None, modelname='SegnetSkip3', imgdir='results', dataset_name='kitti', criterion=nn.CrossEntropyLoss(), optimizer=None, epoch=None):
 	if model == None:
 		model = Segnet(7,3)	
 	#if optimizer == None:
@@ -106,6 +111,18 @@ def predict_single_image(img, imgs, imgorig, modelpath=None, model=None, imgdir=
 		model.load_state_dict(checkpoint['model_state_dict'])
 		epoch = checkpoint['epoch']
 	#optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+	if model == None and modelpath == None:
+		raise ModelPathrequiredError("Both model and modelpath are None")
+	elif model == None and modelpath != None:
+		if modelname == 'Segnet':
+			model = Segnet(7,3)
+		elif modelname == 'SegnetSkip':
+			model = SegnetSkip(7,3)
+		elif modelname == 'SegnetSkip3':
+			model = SegnetSkip3(7,3)
+		checkpoint = torch.load(modelpath)
+		model.load_state_dict(checkpoint['model_state_dict'])
+	#mean, std = get_mean_std(dataset_name)
 	if epoch == None:
 		epoch = 10
 	model.eval()
@@ -121,13 +138,17 @@ def predict_single_image(img, imgs, imgorig, modelpath=None, model=None, imgdir=
 	#print('out shape: ', out.shape)
 	#print('out: ', out)
 	inds = torch.argmax(out, dim=1)
+	num_classes = out.shape[1]
 	#print('inds: ', inds)
 	#inds = torch.squeeze(inds, 0)
 	#imgs = torch.squeeze(imgs, 0)
 	#imgorig = torch.squeeze(imgorig, 0)
 	#print('inds shape: ', inds.shape)
 	#print('np.unique(inds.flatten()): ', np.unique(inds.flatten()))
-	color_arr = get_my_colors()
+	if dataset_name == 'kitti':
+		color_arr = get_my_colors(dataset_name)
+	elif dataset_name == 'CamVid':
+		color_arr = label_colours
 	outimg = np.ones((img.shape[0], 360,480,3))
 	indices = np.indices((img.shape[0], 360,480))
 	#outimg[indices[0,:,:],indices[1,:,:],:] = color_arr[inds]
@@ -148,16 +169,129 @@ def predict_single_image(img, imgs, imgorig, modelpath=None, model=None, imgdir=
 	#cv2.imwrite('outimg2.jpg', outimg2)
 	#cv2.imwrite('imorig.jpg', imgorig.numpy())
 	mean = 0
+	pixelacc = 0
+	intersect = np.zeros((num_classes,))
+	union = np.zeros((num_classes,))
+	x_logits = torch.logit(out,eps=1e-7) 
+	output = criterion(x_logits,imgs)
+	loss = output.item()
 	for i in range(img.shape[0]):
 		cv2.imwrite(imgdir + '/e' + str(epoch) + '_outimg_' + str(i) + '.jpg', outimg[i,:,:,:])
 		cv2.imwrite(imgdir + '/e' + str(epoch) + '_img_'  + str(i) + '.jpg', outimg2[i,:,:,:])
 		cv2.imwrite(imgdir + '/e' + str(epoch) + '_imgorig_' + str(i)  + '.jpg', imgorig[i,:,:,:])
-		mean += np.sum(np.equal(inds[i,:,:].numpy(), imgs[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2])
-		print('np.sum(np.equal(inds[i,:,:], imgs[i,:,:]))/(inds.shape[1]*inds.shape[2]): ', np.sum(np.equal(inds[i,:,:].numpy(), imgs[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2]))
-	print('mean/img.shape[0]: ', mean/img.shape[0])
-	return mean/img.shape[0]
+		#mean += np.sum(np.equal(inds[i,:,:].numpy(), imgs[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2])
+		#print('np.sum(np.equal(inds[i,:,:], imgs[i,:,:]))/(inds.shape[1]*inds.shape[2]): ', np.sum(np.equal(inds[i,:,:].numpy(), imgs[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2]))
+	compute_intersection_union(inds, imgs, num_classes, intersect, union)
+	pixelacc += np.sum(np.equal(inds.numpy(), imgs.numpy()))/(inds.shape[1]*inds.shape[2])
+	mean_iou = np.mean(intersect/union)
+	print('pixelacc: ', pixelacc/img.shape[0])
+	print('mean_iou: ', mean_iou)
+	return pixelacc/img.shape[0], mean_iou, intersect, union, loss
 	#print('color_arr[inds] shape: ', color_arr[inds].shape)
 	#print('color_arr[inds]: ', color_arr[inds])
+
+
+def compute_intersection_union(imginds, imgsemgt, num_classes, intersect, union):
+	inds = np.arange(num_classes)
+	imginds = imginds.numpy()
+	imgsemgt = imgsemgt.numpy()
+	imgindsbool = imginds[:, np.newaxis,:,:] == inds.reshape((1,num_classes,1,1))
+	imgsemgtbool = imgsemgt[:,np.newaxis,:,:] == inds.reshape((1,num_classes,1,1))
+	intersect += np.sum(np.logical_and(imgindsbool, imgsemgtbool), axis=(0, 2, 3))
+	union += np.sum(imgindsbool, axis=(0,2,3)) - np.sum(np.logical_and(imgindsbool, imgsemgtbool), axis=(0, 2, 3)) + np.sum(imgsemgtbool, axis=(0,2,3)) 
+	#print('intersect imgs: ', np.sum(np.logical_and(imgindsbool, imgsemgtbool), axis=(0, 2, 3)))
+	#print('union imgs: ', np.sum(imgindsbool, axis=(0,2,3)) - np.sum(np.logical_and(imgindsbool, imgsemgtbool), axis=(0, 2, 3)) + np.sum(imgsemgtbool, axis=(0,2,3)))
+
+def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, modelpath=None, modelname='Segnet', gt_present=True, save_images=False, criterion=nn.CrossEntropyLoss(), epoch=None):
+	if model == None and modelpath == None:
+		raise ModelPathrequiredError("Both model and modelpath are None")
+	elif model == None and modelpath != None:
+		if modelname == 'Segnet':
+			model = Segnet(7,3)
+		elif modelname == 'SegnetSkip':
+			model = SegnetSkip(7,3)
+		elif modelname == 'SegnetSkip3':
+			model = SegnetSkip3(7,3)
+		checkpoint = torch.load(modelpath)
+		model.load_state_dict(checkpoint['model_state_dict'])
+	#mean, std = get_mean_std(dataset_name)
+	imgh = dataset.imgh
+	imgw = dataset.imgw
+	batch_size = 4
+	loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+	model.eval()
+	numimgs = 0
+	pixelacc = 0
+	intersect = np.zeros((dataset.num_classes,), dtype='int64')
+	union = np.zeros((dataset.num_classes,), dtype='int64')
+	if dataset_name == 'kitti':
+		color_arr = get_my_colors(dataset_name)
+	elif dataset_name == 'CamVid':
+		color_arr = label_colours
+	total_time = 0
+	total_loss = 0
+	timeimg = 0
+	randi = np.random.randint(0, len(dataset))
+	randi = int(randi/batch_size)
+	with torch.no_grad():
+		for i, data in enumerate(loader):
+			img = data['image']
+			dimg = data['original']
+			start = time.time()
+			out = model.forward(img)
+			timeimg += time.time() - start
+			print('timeimg: ', timeimg)
+			total_time += timeimg
+			inds = torch.argmax(out, dim=1)
+			outimg = np.ones((img.shape[0], 360,480,3))
+			indices = np.indices((img.shape[0], 360,480))
+			outimg[indices[0,:,:,:], indices[1,:,:,:],indices[2,:,:,:],:] = color_arr[inds]
+			outimg = outimg.astype('uint8')
+			if gt_present == True:
+				ds = data['semantic']
+				num_classes = out.shape[1]
+				compute_intersection_union(inds, ds, num_classes, intersect, union)
+				pixelacc += np.sum(np.equal(inds.numpy(), ds.numpy()))/(inds.shape[1]*inds.shape[2])
+				#print('pixelacc: ', pixelacc)
+				x_logits = torch.logit(out,eps=1e-7) 
+				output = criterion(x_logits,ds)
+				loss = output.item()
+				total_loss += ds.shape[0]*loss
+				outimg2 = np.ones((img.shape[0], 360,480,3))
+				outimg2[indices[0,:,:,:], indices[1,:,:,:],indices[2,:,:,:],:] = color_arr[ds]
+				outimg2 = outimg2.astype('uint8')
+			imgorig = dimg
+			imgorig = torch.permute(imgorig, (0,2,3,1))
+			imgorig = 255*imgorig
+			imgorig = imgorig.numpy().astype('uint8')
+			numimgs += img.shape[0]
+			if save_images:
+				for i in range(img.shape[0]):
+					cv2.imwrite(imgdir + '/segm/' + str(numimgs) + '_outimg_' + '.jpg', outimg[i,:,:,:])
+					#cv2.imwrite(imgdir + '/orig/' + str(numimgs) + '_imgorig_' + '.jpg', imgorig[i,:,:,:])
+					if gt_present == True:
+						cv2.imwrite(imgdir + '/' + str(numimgs) + '_img_' + '.jpg', outimg2[i,:,:,:])
+					#pixelacc += np.sum(np.equal(inds[i,:,:].numpy(), ds[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2])
+					#print('np.sum(np.equal(inds[i,:,:], imgs[i,:,:]))/(inds.shape[1]*inds.shape[2]): ', np.sum(np.equal(inds[i,:,:].numpy(), imgs[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2]))
+			elif i == randi and epoch != None:
+				for j in range(img.shape[0]):
+					cv2.imwrite(imgdir + '/e' + str(epoch) + '_outimg_' + str(j) + '.jpg', outimg[j,:,:,:])
+					cv2.imwrite(imgdir + '/e' + str(epoch) + '_img_'  + str(j) + '.jpg', outimg2[j,:,:,:])
+					cv2.imwrite(imgdir + '/e' + str(epoch) + '_imgorig_' + str(j)  + '.jpg', imgorig[j,:,:,:])				
+
+			#print('intersect: ', intersect)
+			#print('union: ', union)
+	#print('total_time: ', total_time)
+	#print('average time: ', total_time/numimgs)
+	if gt_present == True:
+		pixelacc = pixelacc/numimgs
+		iou = np.mean(intersect/union)
+		print('intersect/union: ', intersect/union)
+		loss = total_loss/numimgs
+		return pixelacc, iou, loss, intersect, union
+
+
+
 
 
 if __name__ == 'main':
