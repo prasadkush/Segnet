@@ -31,3 +31,15 @@ Below are the segmented output images from the network when fed with test images
 ![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/46_overlayimg2_.jpg)
 
 ![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/47_overlayimg2_.jpg)
+
+![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/25_overlayimg2_.jpg)
+
+![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/26_overlayimg2_.jpg)
+
+![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/27_overlayimg2_.jpg)
+
+![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/28_overlayimg2_.jpg)
+
+![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/29_overlayimg2_.jpg)
+
+![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/30_overlayimg2_.jpg)
