@@ -15,8 +15,13 @@ run python main.py
 3. Skip connections between certain layers of encoder and decoder. 
 5. Use of PRelu as activation.
 
-## Results on Kitti test dataset 
-The model in modelv3.py was trained on CamVid semantic segmentation dataset obtained from [this github link](https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid), consisting of 367 training images and 101 validation images. The training was done for 35 epochs. The model consisted of skip connections between certain different scale feature maps in the decoder, and between certain encoder and decoder layers, besides a basic Segnet architecture.
+## Results on CamVid dataset 
+The model in modelv3.py was trained on CamVid semantic segmentation dataset obtained from [this github link](https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid), consisting of 367 training images and 101 validation images. The training was done for 35 epochs. The model consisted of skip connections between certain different scale feature maps in the decoder, and between certain encoder and decoder layers, besides a basic Segnet architecture. The training was done from scratch without use of any pretrained weights.
+
+|  | Result |
+| --- | --- |
+| pixel accuracy on validation dataset| 89.709 % |
+| mean IoU on validation dataset | 53.348 % |
 
 Below are results on some images of the CamVid validation dataset. leftmost is the segmented output, middle is the original image of 360 x 480 resolution and rightmost is the segmentation overlayed on original RGB image.
 
