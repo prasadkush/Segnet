@@ -7,7 +7,7 @@ Code for segmentation network based on Segnet. The framework is PyTorch.
 
 run python main.py
 
-## Features of model in modelv2.py
+## Features of model in modelv3.py
 
 1. VGG-16 type encoder and decoder layers.
 2. Transfer of max-pooling indices to decoder for unpooling.
