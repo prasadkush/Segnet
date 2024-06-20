@@ -51,8 +51,6 @@ Below are results on some images of the CamVid validation dataset. leftmost is t
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/92_overlayimg_.jpg)
 
-![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/87_overlayimg_.jpg)
-
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/81_overlayimg_.jpg)
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/28_overlayimg_.jpg)
