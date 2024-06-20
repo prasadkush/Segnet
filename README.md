@@ -24,8 +24,6 @@ Below are results on some images of the CamVid validation dataset. leftmost is t
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/26_overlayimg_.jpg)
 
-![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/26_overlayimg_.jpg)
-
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/37_overlayimg_.jpg)
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/47_overlayimg_.jpg)
@@ -36,8 +34,30 @@ Below are results on some images of the CamVid validation dataset. leftmost is t
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/6_overlayimg_.jpg)
 
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/72_overlayimg_.jpg)
+
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/76_overlayimg_.jpg)
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/87_overlayimg_.jpg)
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/98_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/95_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/92_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/87_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/81_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/28_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/30_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/39_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/47_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/56_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/68_overlayimg_.jpg)
