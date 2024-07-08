@@ -1,56 +1,74 @@
-# Segnet
-Code for segmentation network based on Segnet. The framework is PyTorch. 
+# Segmentation Using Dilated Convolutions
+The segmentation model uses of dilated comvolutions ([[2], [3]), transfer of max-pooling indices as in [1], skip connections from encoder to decoder and use of normal convolutions in parallel with dilated convolutions. The framework used is PyTorch. 
 
 [1] Badrinarayanan, Vijay, Alex Kendall, and Roberto Cipolla. "Segnet: A deep convolutional encoder-decoder architecture for image segmentation." IEEE transactions on pattern analysis and machine intelligence 39.12 (2017): 2481-2495.
+[2] Chen LC, Papandreou G, Kokkinos I, Murphy K, Yuille AL. Deeplab: Semantic image segmentation with deep convolutional nets, atrous convolution, and fully connected crfs. IEEE transactions on pattern analysis and machine intelligence. 2017 Apr 27;40(4):834-48.
+[3] Chen LC, Papandreou G, Kokkinos I, Murphy K, Yuille AL. Semantic image segmentation with deep convolutional nets and fully connected crfs. arXiv preprint arXiv:1412.7062. 2014 Dec 22.
 
 ## Instructions for training:
 
 run python main.py
 
-## Features of model in modelv2.py
+## Features of model in model_dilated2.py
 
-1. VGG-16 type encoder.
-2. Transfer of max-pooling indices to decoder for unpooling.
-3. Skip connections between certain layers in decoder.
-4. Use of PRelu as activation.
+1. The encoder consists of the following blocks:
+    a) Block 1: (in channels: 3, out channels: 64), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
+    b) Block 2: (in channels: 64, out channels: 128), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
+    c) Block 3: (in channels: 128, out channels: 128), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
+    d) Block 4: (in channels: 128, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 2) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
+    e) Block 5: (in channels: 192, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 4) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
+    f) Block 6: (in channels: 192, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 6) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
+    g) Block 7: (in channels: 192, out channels: 128, 1 1 x 1 conv layer with batchnorm and PRelu.
+NOTE: Each conv layer in Blocks 4 - 6 is followed by batchnorm, dropout and PRelu.
+2. The decoder consists adds the output from the first 3 encoder blocks before unpooling by making use of indices obtained from first 3 encoder blocks. Each unpooling layer is followed by 2 5 x 5 conv layers with batchnorm, dropout and PRelu. 
+3. The classify block consists of a 1 x 1 conv layer followed by a Softmax activation.
 
-## Results on Kitti test dataset 
-The model in modelv2.py was trained on kitti semantic segmentation dataset obtained from [kitti website](https://www.cvlibs.net/datasets/kitti/eval_semseg.php?benchmark=semantics2015), consisting of 200 training images. The training was done for 46 epochs. The model consisted of skip connections between certain different scale feature maps in the decoder, besides a basic Segnet architecture.
+## Results on CamVid dataset 
+The model in model_dilated2.py was trained on CamVid semantic segmentation dataset obtained from [this github link](https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid), consisting of 367 training images and 101 validation images. The training was done for 35 epochs. The training was done from scratch without use of any pretrained weights.
 
-Below are the segmented output images from the network when fed with test images from the kitti datasset. leftmost is the segmented output, middle is the original image resized to 360 x 480 resolution and rightmost is the segmentation overlayed on resized original RGB image.
+|  | Result |
+| --- | --- |
+| pixel accuracy on validation dataset| 89.709 % |
+| mean IoU on validation dataset | 53.348 % |
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/117_overlayimg2_.jpg)
+Below are results on some images of the CamVid validation dataset. leftmost is the segmented output, middle is the original image of 360 x 480 resolution and rightmost is the segmentation overlayed on original RGB image.
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/126_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/18_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/133_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/26_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/134_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/37_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/16_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/47_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/17_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/50_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/198_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/63_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/34_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/6_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/46_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/72_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/47_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/76_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/25_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/87_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/26_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/98_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/27_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/95_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/28_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/92_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/29_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/81_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/30_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/28_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/91_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/30_overlayimg_.jpg)
 
-![Result on kitti test image](https://github.com/prasadkush/Segnet/blob/main/images/92_overlayimg2_.jpg)
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/39_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/47_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/56_overlayimg_.jpg)
+
+![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/CamVid/CamVid%20Val%20Result%20Images/68_overlayimg_.jpg)
