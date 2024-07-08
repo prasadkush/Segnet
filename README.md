@@ -12,13 +12,13 @@ run python main.py
 ## Features of model in model_dilated2.py
 
 1. The encoder consists of the following blocks:
-    a) Block 1: (in channels: 3, out channels: 64), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
-    b) Block 2: (in channels: 64, out channels: 128), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
-    c) Block 3: (in channels: 128, out channels: 128), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
-    d) Block 4: (in channels: 128, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 2) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
-    e) Block 5: (in channels: 192, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 4) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
-    f) Block 6: (in channels: 192, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 6) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
-    g) Block 7: (in channels: 192, out channels: 128, 1 1 x 1 conv layer with batchnorm and PRelu.
+    - Block 1: (in channels: 3, out channels: 64), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer
+    -  Block 2: (in channels: 64, out channels: 128), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
+    - Block 3: (in channels: 128, out channels: 128), 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer.
+    - Block 4: (in channels: 128, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 2) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
+    - Block 5: (in channels: 192, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 4) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
+    - Block 6: (in channels: 192, out channels: 192), 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel 2 3 x 3 conv layers (dilation 6) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams.
+    - Block 7: (in channels: 192, out channels: 128, 1 1 x 1 conv layer with batchnorm and PRelu.
 NOTE: Each conv layer in Blocks 4 - 6 is followed by batchnorm, dropout and PRelu.
 2. The decoder consists adds the output from the first 3 encoder blocks before unpooling by making use of indices obtained from first 3 encoder blocks. Each unpooling layer is followed by 2 5 x 5 conv layers with batchnorm, dropout and PRelu. 
 3. The classify block consists of a 1 x 1 conv layer followed by a Softmax activation.
