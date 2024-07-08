@@ -16,7 +16,7 @@ run python main.py
 1. The encoder consists of the following blocks:
     - Blocks 1 - 3: 2 7 x 7 conv layers with batchnorm and PRelu followed by maxpooling layer
     - Blocks 4 - 6: 2 7 x 7 conv layers followed by 1 x 1 conv layer in parallel with 2 3 x 3 conv layers (dilation 2 for block 4, 4 for block 5 and 6 for block 6) folllowed by 1 x 1 conv layer and concatenation of the 2 parallel streams. Each conv layer in blocks 4 - 6 is followed by batchnorm, dropout and PRelu.
-    - Block 7: (in channels: 192, out channels: 128, 1 1 x 1 conv layer with batchnorm and PRelu.
+    - Block 7: 1 1 x 1 conv layer with batchnorm and PRelu.
 2. The decoder consists adds the output from the first 3 encoder blocks before unpooling by making use of indices obtained from first 3 encoder blocks. Each unpooling layer is followed by 2 5 x 5 conv layers with batchnorm, dropout and PRelu. 
 3. The classify block consists of a 1 x 1 conv layer followed by a Softmax activation.
 
