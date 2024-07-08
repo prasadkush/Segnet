@@ -8,6 +8,7 @@ from torch import optim
 from model import Encoder, Segnet
 from modelv2 import Segnet as SegnetSkip
 from modelv3 import Segnet as SegnetSkip3
+from model_dilated import SegmentationDilated as SegmentationDil
 import matplotlib.pyplot as plt
 import numpy as np
 from preprocess import get_mean_std
@@ -16,7 +17,9 @@ import os
 import pdb
 import time
 from test_segmentation_camvid import label_colours
-
+from model_dilated2 import SegmentationDilated as SegmentationDil2
+from model_dilated3 import SegmentationDilated as SegmentationDil3
+from model_dilated4 import SegmentationDilated as SegmentationDil4
 from labels import Label, id2myid, id2label, names2mynames
 
 def getmyids():
@@ -120,6 +123,12 @@ def predict_single_image(img, imgs, imgorig, modelpath=None, model=None, modelna
 			model = SegnetSkip(7,3)
 		elif modelname == 'SegnetSkip3':
 			model = SegnetSkip3(7,3)
+		elif modelname == 'SegmentationDil2':
+			model = SegmentationDil2(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil3':
+			model = SegmentationDil3(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil4':
+			model = SegmentationDil4(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
 		checkpoint = torch.load(modelpath)
 		model.load_state_dict(checkpoint['model_state_dict'])
 	#mean, std = get_mean_std(dataset_name)
@@ -205,19 +214,26 @@ def compute_intersection_union(imginds, imgsemgt, num_classes, intersect, union)
 def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, modelpath=None, modelname='Segnet', gt_present=True, save_images=False, criterion=nn.CrossEntropyLoss(), epoch=None):
 	if model == None and modelpath == None:
 		raise ModelPathrequiredError("Both model and modelpath are None")
-	elif model == None and modelpath != None:
+	elif model == None:
 		if modelname == 'Segnet':
 			model = Segnet(7,3)
 		elif modelname == 'SegnetSkip':
 			model = SegnetSkip(7,3)
 		elif modelname == 'SegnetSkip3':
 			model = SegnetSkip3(7,3)
+		elif modelname == 'SegmentationDil2':
+			model = SegmentationDil2(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil3':
+			model = SegmentationDil3(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil4':
+			model = SegmentationDil4(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+	if modelpath != None:
 		checkpoint = torch.load(modelpath)
 		model.load_state_dict(checkpoint['model_state_dict'])
 	#mean, std = get_mean_std(dataset_name)
 	imgh = dataset.imgh
 	imgw = dataset.imgw
-	batch_size = 4
+	batch_size = 8
 	loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
 	model.eval()
 	numimgs = 0
@@ -231,17 +247,16 @@ def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, mod
 	total_time = 0
 	total_loss = 0
 	timeimg = 0
-	randi = np.random.randint(0, len(dataset))
-	randi = int(randi/batch_size)
+	randi = np.random.randint(0, len(dataset) - batch_size)
+	randi = int(randi/batch_size) 
 	with torch.no_grad():
 		for i, data in enumerate(loader):
 			img = data['image']
 			dimg = data['original']
 			start = time.time()
 			out = model.forward(img)
-			timeimg += time.time() - start
-			print('timeimg: ', timeimg)
-			total_time += timeimg
+			total_time += time.time() - start
+			#print('timeimg: ', timeimg)
 			inds = torch.argmax(out, dim=1)
 			outimg = np.ones((img.shape[0], 360,480,3))
 			indices = np.indices((img.shape[0], 360,480))
@@ -264,13 +279,12 @@ def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, mod
 			imgorig = torch.permute(imgorig, (0,2,3,1))
 			imgorig = 255*imgorig
 			imgorig = imgorig.numpy().astype('uint8')
-			numimgs += img.shape[0]
 			if save_images:
-				for i in range(img.shape[0]):
-					cv2.imwrite(imgdir + '/segm/' + str(numimgs) + '_outimg_' + '.jpg', outimg[i,:,:,:])
-					#cv2.imwrite(imgdir + '/orig/' + str(numimgs) + '_imgorig_' + '.jpg', imgorig[i,:,:,:])
-					if gt_present == True:
-						cv2.imwrite(imgdir + '/' + str(numimgs) + '_img_' + '.jpg', outimg2[i,:,:,:])
+				for j in range(img.shape[0]):
+					cv2.imwrite(imgdir + '/segm/' + str(numimgs + j) + '_outimg_' + '.jpg', outimg[j,:,:,:])
+					cv2.imwrite(imgdir + '/orig/' + str(numimgs + j) + '_imgorig_' + '.jpg', imgorig[j,:,:,:])
+					#if gt_present == True:
+					#	cv2.imwrite(imgdir + '/' + str(numimgs) + '_img_' + '.jpg', outimg2[i,:,:,:])
 					#pixelacc += np.sum(np.equal(inds[i,:,:].numpy(), ds[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2])
 					#print('np.sum(np.equal(inds[i,:,:], imgs[i,:,:]))/(inds.shape[1]*inds.shape[2]): ', np.sum(np.equal(inds[i,:,:].numpy(), imgs[i,:,:].numpy()))/(inds.shape[1]*inds.shape[2]))
 			elif i == randi and epoch != None:
@@ -278,16 +292,18 @@ def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, mod
 					cv2.imwrite(imgdir + '/e' + str(epoch) + '_outimg_' + str(j) + '.jpg', outimg[j,:,:,:])
 					cv2.imwrite(imgdir + '/e' + str(epoch) + '_img_'  + str(j) + '.jpg', outimg2[j,:,:,:])
 					cv2.imwrite(imgdir + '/e' + str(epoch) + '_imgorig_' + str(j)  + '.jpg', imgorig[j,:,:,:])				
-
+			numimgs += img.shape[0]
 			#print('intersect: ', intersect)
 			#print('union: ', union)
 	#print('total_time: ', total_time)
-	#print('average time: ', total_time/numimgs)
+	print('average time: ', total_time/numimgs)
 	if gt_present == True:
 		pixelacc = pixelacc/numimgs
 		iou = np.mean(intersect/union)
 		print('intersect/union: ', intersect/union)
+		#print('pixelacc: ', pixelacc)
 		loss = total_loss/numimgs
+		#print('loss: ', loss)
 		return pixelacc, iou, loss, intersect, union
 
 

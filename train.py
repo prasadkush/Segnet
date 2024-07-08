@@ -16,14 +16,15 @@ from torchvision.models import vgg16_bn
 
 weight_dict = {}
 
-def save_model(loss, path, epoch, model, optimizer, lr_schedule, lr_milestones):
+def save_model(loss, path, epoch, model, optimizer, lr_schedule, lr_milestones, mean_iou):
     EPOCH = epoch
     PATH_ = path
     LOSS_ = loss
+    MEAN_IOU_ = mean_iou
 
     torch.save({
         'epoch': EPOCH, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict(),
-            'loss': LOSS_, 'lr_schedule': lr_schedule, 'lr_milestones': lr_milestones}, PATH_)
+            'loss': LOSS_, 'mean_iou': MEAN_IOU_, 'lr_schedule': lr_schedule, 'lr_milestones': lr_milestones}, PATH_)
 
 def compute_loss(dataset):
     batch_size = len(dataset)
@@ -42,6 +43,8 @@ def weights_init(m):
         #torch.nn.init.uniform_(m.weight)  
         torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
         #torch.nn.init.zeros_(m.bias)
+    elif isinstance(m, nn.ConvTranspose2d):
+        torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
     elif isinstance(m, nn.Linear):
         #torch.nn.init.normal_(m.weight, mean=0.2, std=1)
         torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
@@ -87,11 +90,13 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
     loader_val = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True)
     loaderiter_val = iter(loader_val)
     num_val = 0
-    compute_val_over_whole_data = False
+    compute_val_over_whole_data = True
 
     start_epoch = 0
     loss = 0
     best_loss = 100000
+    best_val_loss = 10000
+    best_mean_iou = 0
     total_loss = 0
     training_loss_list = []
     #mean_list = []
@@ -100,9 +105,9 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
     pixelacc_val_list = []
     meaniou_val_list = []
     loss_val_list = []
-    epochs = 46
+    epochs = 60
     lr_schedule = [lr_initial, 0.01, 0.005, 0.001]
-    lr_milestones = [12, 24, 34, epochs]
+    lr_milestones = [20, 35, 50, epochs]
 
     if resume_training == True and modelpath != None:
         checkpoint = torch.load(modelpath)
@@ -118,20 +123,44 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
         ind_sch = np.searchsorted(np.array(lr_milestones), start_epoch, side='right')
         lr_new = lr_schedule[ind_sch]
 
+        bestvalmodelpath = resultsdir + '/bestvallosssegnetmodelnew.pt'
+        valcheckpoint = torch.load(bestvalmodelpath)
+        valepoch = valcheckpoint['epoch']
+        best_val_loss = valcheckpoint['loss']
+
+        bestvalioumodelpath = resultsdir + '/bestmeaniousegmentmodelnew.pt'
+        valioucheckpoint = torch.load(bestvalioumodelpath)
+        iouvalepoch = valioucheckpoint['epoch']
+        best_mean_iou = valioucheckpoint['mean_iou']
+
         with open(resultsdir + '/training_loss_list.pkl', 'rb') as f:
             training_loss_list = pickle.load(f)
+            training_loss_list = training_loss_list[0:min(start_epoch,len(training_loss_list))]
+            print('len(training_loss_list): ', len(training_loss_list))
         #with open(resultsdir + '/mean_list.pkl', 'rb') as f:
         #    mean_list = pickle.load(f)
         with open(resultsdir + '/pixelacclist.pkl', 'rb') as f:
             pixelacclist = pickle.load(f)
+            pixelacclist = pixelacclist[0:min(start_epoch,len(pixelacclist))]
+            print('len(pixelacclist): ', len(pixelacclist))
         with open(resultsdir + '/mean_ioulist.pkl', 'rb') as f:
             mean_ioulist = pickle.load(f)
+            mean_ioulist = mean_ioulist[0:min(start_epoch,len(mean_ioulist))]
+            print('len(mean_ioulist): ', len(mean_ioulist))
         with open(resultsdir + '/meaniou_val_list.pkl', 'rb') as f:
             meaniou_val_list = pickle.load(f)
+            meaniou_val_list = meaniou_val_list[0:min(start_epoch,len(meaniou_val_list))]
+            best_mean_iou2 = max(meaniou_val_list)
+            print('len(meaniou_val_list): ', len(meaniou_val_list))
         with open(resultsdir + '/pixelacc_val_list.pkl', 'rb') as f:
             pixelacc_val_list = pickle.load(f)
+            pixelacc_val_list = pixelacc_val_list[0:min(start_epoch,len(pixelacc_val_list))]
+            print('len(pixelacc_val_list): ', len(pixelacc_val_list))
         with open(resultsdir + '/loss_val_list.pkl', 'rb') as f:
             loss_val_list = pickle.load(f)
+            loss_val_list = loss_val_list[0:min(start_epoch,len(loss_val_list))]
+            print('len(loss_val_list): ', len(loss_val_list))
+            best_val_loss2 = min(loss_val_list)
     elif resume_training == True and modelpath == None:
         raise ModelPathrequiredError("Provide Model path if resume_training is set to True")
 
@@ -161,6 +190,14 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
     print('resume_training: ', resume_training)
     print('start_epoch: ', start_epoch)
     print('best_loss: ', best_loss)
+    print('best_val_loss: ', best_val_loss)
+    print('best_mean_iou: ', best_mean_iou)
+    if resume_training == True:
+        print('best_mean_iou2: ', best_mean_iou2)
+        print('best_val_loss2: ', best_val_loss2)
+        print('valepoch: ', valepoch)
+        print('iouvalepoch: ', iouvalepoch)
+        print('ind_sch: ', ind_sch)
 
     #epochs = 46
     #lr_schedule = [lr_initial, lr_initial/2, lr_initial/5, lr_initial/10]
@@ -174,10 +211,17 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
     print('lr_new: ', lr_new)
     print('resultsdir: ', resultsdir)
     #loaderiter = iter(loader)
-    ind_sch = 0
+    if resume_training == False:
+        ind_sch = 0
     num_classes = dataset.num_classes
     for e in range(start_epoch, epochs):
         print('epoch: ', e)
+        count = 0
+        for g in optimizer.param_groups:
+            print('g[lr]: ', g['lr'])
+            if count == 0:
+                break
+
         '''
         if e >= 10 and e < 20:
             #lr_new = lr_initial*(1-e/epochs)
@@ -255,16 +299,6 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
         print('training loss: ', training_loss)
         pixelacclist.append(pixelacc)
         mean_ioulist.append(mean_iou)
-        if training_loss < best_loss:
-            #path = 'results/trial0/bestlosssegnetmodelnew.pt'
-            path = resultsdir + '/bestlosssegnetmodelnew.pt'
-            save_model(training_loss, path, e, model, optimizer, lr_schedule, lr_milestones)
-            best_loss = training_loss
-
-        if best_loss != training_loss:
-            #path = 'results/trial0/latestsegnetmodelnew.pt'
-            path = resultsdir + '/latestsegnetmodelnew.pt'
-            save_model(training_loss, path, e, model, optimizer, lr_schedule, lr_milestones)
 
         with open(resultsdir + '/training_loss_list.pkl', 'wb') as f:
             pickle.dump(training_loss_list, f)
@@ -298,15 +332,12 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
         torch.save(tensor_dict, resultsdir + '/params_e' + str(e) + '.pt')
 
         if compute_val_over_whole_data:
-            pixelacc_val, meaniou_val, val_loss, intersect_val, union_val = compute_accuracy(val_dataset, dataset_name='CamVid', imgdir=resultsdir + '/imgs', criterion=criterion, model=model, modelname='SegnetSkip3', gt_present=True, save_images=False, epoch=e) 
-            val_loss_list.append(val_loss)
+            pixelacc_val, meaniou_val, val_loss, intersect_val, union_val = compute_accuracy(val_dataset, dataset_name='CamVid', imgdir=resultsdir + '/imgs', criterion=criterion, model=model, modelname='SegmentationDil4', gt_present=True, save_images=False, epoch=e) 
             intersect_union_val = intersect_val/union_val
             print('pixelacc_val: ', pixelacc_val)
             print('meaniou_val: ', meaniou_val)
             print('val_loss: ', val_loss)
             print('intersect_val/union_val: ', intersect_union_val)
-            with open(resultsdir + '/loss_val_list.pkl', 'wb') as f:
-                pickle.dump(loss_val_list, f)
         else:
             if num_val >= 200:
                 data_val = next(cycle(loaderiter_val))
@@ -317,21 +348,43 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
             imgs_val = data_val['semantic']
             imgorig_val = data_val['original']
             with torch.no_grad():
-                pixelacc_val, meaniou_val, intersect_val, union_val, loss_val = predict_single_image(img_val, imgs_val, imgorig_val, model=model, modelname='SegnetSkip3', dataset_name='CamVid', criterion=criterion, imgdir=resultsdir + '/imgs', epoch=e)
+                pixelacc_val, meaniou_val, intersect_val, union_val, val_loss = predict_single_image(img_val, imgs_val, imgorig_val, model=model, modelname='SegmentationDil4', dataset_name='CamVid', criterion=criterion, imgdir=resultsdir + '/imgs', epoch=e)
             intersect_union_val = intersect_val/union_val
             print('pixelacc_val: ', pixelacc_val)
             print('meaniou_val: ', meaniou_val)
             print('intersect_val/union_val: ',intersect_union_val)
-            print('loss_val: ', loss_val)
+            print('loss_val: ', val_loss)
         pixelacc_val_list.append(pixelacc_val)
         meaniou_val_list.append(meaniou_val)
-        loss_val_list.append(loss_val)
+        loss_val_list.append(val_loss)
+
         with open(resultsdir + '/pixelacc_val_list.pkl', 'wb') as f:
             pickle.dump(pixelacc_val_list, f)
         with open(resultsdir + '/meaniou_val_list.pkl', 'wb') as f:
             pickle.dump(meaniou_val_list, f)
         with open(resultsdir + '/loss_val_list.pkl', 'wb') as f:
             pickle.dump(loss_val_list, f)
+
+        if training_loss <= best_loss:
+            #path = 'results/trial0/bestlosssegnetmodelnew.pt'
+            path = resultsdir + '/bestlosssegnetmodelnew.pt'
+            save_model(training_loss, path, e, model, optimizer, lr_schedule, lr_milestones, mean_iou)
+            best_loss = training_loss
+
+        if best_loss != training_loss:
+            #path = 'results/trial0/latestsegnetmodelnew.pt'
+            path = resultsdir + '/latestsegnetmodelnew.pt'
+            save_model(training_loss, path, e, model, optimizer, lr_schedule, lr_milestones, mean_iou)
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            path = resultsdir + '/bestvallosssegnetmodelnew.pt'
+            save_model(val_loss, path, e, model, optimizer, lr_schedule, lr_milestones, meaniou_val)
+
+        if meaniou_val > best_mean_iou:
+            best_mean_iou = meaniou_val
+            path = resultsdir + '/bestmeaniousegmentmodelnew.pt'
+            save_model(val_loss, path, e, model, optimizer, lr_schedule, lr_milestones, meaniou_val)
         #plt.plot(epoch_list, training_loss_list)
         #plt.xlabel('epochs')
         #plt.ylabel('training loss')

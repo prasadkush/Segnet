@@ -6,8 +6,10 @@ from modelv2 import Encoder, Segnet
 from modelv3 import Segnet as SegnetSkip3
 import torch
 from train import train
-
-
+from model_dilated import SegmentationDilated as SegmentationDil
+from model_dilated2 import SegmentationDilated as SegmentationDil2
+from model_dilated3 import SegmentationDilated as SegmentationDil3
+from model_dilated4 import SegmentationDilated as SegmentationDil4
 from labels import mylabels, Label, id2myid, id2label
 
 datapath = 'C:/Users/Kush/OneDrive/Desktop/CV-Ml/datasets/data_semantics/training'
@@ -15,13 +17,17 @@ datapathcam = 'C:/Users/Kush/OneDrive/Desktop/CV-ML/datasets/SegNet-Tutorial-mas
 #dataset = getDataset(datapathcam)
 dataset = getDataset(datapathcam, dataset='CamVid', data_augment=False, gt_present=True, mode='train')
 
-model = SegnetSkip3(kernel_size=7, padding=3, out_channels=12)
+#model = SegnetSkip3(kernel_size=7, padding=3, out_channels=12)
+#model = SegmentationDil(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+model = SegmentationDil2(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+#model = SegmentationDil3(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
 
-resultsdir='results/trial8_CamVid'
+#resultsdir='results/trial8_CamVid'
+resultsdir = 'results/trial10_CamVid_Dil'
 
 modelpath = resultsdir + '/bestlosssegnetmodelnew.pt'
 
-train(dataset, model, resume_training=False, useWeights=False, modelpath=None, resultsdir=resultsdir, pretrained_encoder=False)
+train(dataset, model, batch_size=4, resume_training=False, useWeights=False, modelpath=None, resultsdir=resultsdir, pretrained_encoder=False)
 
 #loader = DataLoader(dataset, batch_size=4, shuffle=True, pin_memory=True)
 
