@@ -1,6 +1,8 @@
 # Segmentation Using Dilated Convolutions
 The segmentation model uses of dilated comvolutions ([2], [3]), transfer of max-pooling indices as in [1], skip connections from encoder to decoder and use of normal convolutions in parallel with dilated convolutions. The framework used is PyTorch. 
 
+References:
+
 [1] Badrinarayanan, Vijay, Alex Kendall, and Roberto Cipolla. "Segnet: A deep convolutional encoder-decoder architecture for image segmentation." IEEE transactions on pattern analysis and machine intelligence 39.12 (2017): 2481-2495. <br/> <br/>
 [2]  Chen LC, Papandreou G, Kokkinos I, Murphy K, Yuille AL. Deeplab: Semantic image segmentation with deep convolutional nets, atrous convolution, and fully connected crfs. IEEE transactions on pattern analysis and machine intelligence. 2017 Apr 27;40(4):834-48. <br/> <br/>
 [3] Chen LC, Papandreou G, Kokkinos I, Murphy K, Yuille AL. Semantic image segmentation with deep convolutional nets and fully connected crfs. arXiv preprint arXiv:1412.7062. 2014 Dec 22. <br/> <br/>
