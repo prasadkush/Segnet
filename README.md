@@ -22,7 +22,8 @@ run python main.py
 
 ## Results on CamVid dataset 
 
-The model in model_dilated2.py was trained on CamVid semantic segmentation dataset obtained from [this github link](https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid), consisting of 367 training images and 101 validation images. The training was done for 60 epochs and the model having best mean iou on validation data was selected. The training was done from scratch without use of any pretrained weights. <br/>
+The model in model_dilated2.py was trained on CamVid semantic segmentation dataset obtained from [this github link](https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid), consisting of 367 training images and 101 validation images. The training was done for 60 epochs and the model having best mean iou on validation data was selected. The training was done from scratch without use of any pretrained weights.<br/>
+
 
 |  | Result |
 | --- | --- |
