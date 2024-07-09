@@ -21,13 +21,15 @@ run python main.py
 3. The classify block consists of a 1 x 1 conv layer followed by a Softmax activation.
 
 ## Results on CamVid dataset 
-The model in model_dilated2.py was trained on CamVid semantic segmentation dataset obtained from [this github link](https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid), consisting of 367 training images and 101 validation images. The training was done for 60 epochs and the model having best mean iou on validation data was selected. The training was done from scratch without use of any pretrained weights.
+
+The model in model_dilated2.py was trained on CamVid semantic segmentation dataset obtained from [this github link](https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid), consisting of 367 training images and 101 validation images. The training was done for 60 epochs and the model having best mean iou on validation data was selected. The training was done from scratch without use of any pretrained weights. <br/>
 
 |  | Result |
 | --- | --- |
 | pixel accuracy on validation dataset| 89.769 % |
 | mean IoU on validation dataset | 55.791 % |
 
+<br/>
 Below are results on some images of the CamVid validation dataset. leftmost is the segmented output, middle is the original image of 360 x 480 resolution and rightmost is the segmentation overlayed on original RGB image.
 
 ![Result on CamVid validation set image](https://github.com/prasadkush/Segnet/blob/SegmentationDilated/CamVid%20Val%20Result%20Images/26_overlayimg_.jpg)
