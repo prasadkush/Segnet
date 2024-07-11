@@ -230,6 +230,9 @@ def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, mod
 	if modelpath != None:
 		checkpoint = torch.load(modelpath)
 		model.load_state_dict(checkpoint['model_state_dict'])
+		print('checkpoint[epoch]: ', checkpoint['epoch'])
+		print('checkpoint[loss]: ', checkpoint['loss'])
+		print('checkpoint[mean_iou]: ', checkpoint['mean_iou'])
 	#mean, std = get_mean_std(dataset_name)
 	imgh = dataset.imgh
 	imgw = dataset.imgw
