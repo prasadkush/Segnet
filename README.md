@@ -11,7 +11,7 @@ References:
 
 run python main.py
 
-## Features of model in model_dilated2.py
+## Features of model in model_dilated4.py
 
 1. The encoder consists of the following blocks:
     - Blocks 1: 2 4 x 4 conv layers, dilation=2 with batchnorm and PRelu followed by maxpooling layer
