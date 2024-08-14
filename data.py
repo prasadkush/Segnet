@@ -108,7 +108,7 @@ class getDataset(Dataset):
         start_idx (int): start of index to use in data list  
         end_idx (int): end of i
     """
-    def __init__(self, datapath, pct=1.0, train_val_split=1.0, dataset='kitti', data_augment=False, gt_present=True, mode='train'):
+    def __init__(self, datapath=None, imgdir=None, pct=1.0, train_val_split=1.0, dataset='kitti', data_augment=False, gt_present=True, mode='train'):
         self.start_idx = 0
         self.color_transform = transforms.Compose([
         transforms.ConvertImageDtype(torch.float),
@@ -127,7 +127,8 @@ class getDataset(Dataset):
         self.dataset = dataset
         myids = getmyids()
         if self.dataset == 'kitti':
-            imgdir = os.path.join(datapath, 'image_2')
+            if imgdir == None:
+                imgdir = os.path.join(datapath, 'image_2')
         elif self.dataset == 'CamVid':
             if mode == 'train':
                 imgdir = os.path.join(datapath, 'train')
@@ -152,24 +153,24 @@ class getDataset(Dataset):
         i = 0
         self.semantic_data = []
         self.samples = []
-        if self.dataset == 'kitti':
-            imgdir = os.path.join(datapath, 'semantic')
-            self.num_classes = 16
-        elif self.dataset == 'CamVid':
-            if mode == 'train':
-                imgdir = os.path.join(datapath, 'trainannot')
-            elif mode == 'val':
-                imgdir = os.path.join(datapath, 'valannot')
-            elif mode == 'test':
-                imgdir = os.path.join(datapath, 'testannot')
-            self.num_classes = 12
-        myids = 0
-        self.myfreqs = np.zeros((self.num_classes,1)).astype('int32') # num of pixels of a particular class/total num of pixels in images in which the class occurs
-        self.numimages = np.zeros((self.num_classes,1)).astype('int32') # no of images in which the class occurs
-        if dataset == 'kitti':
-            myids = getmyids()
-        print('myids: ', myids)
-        if gt_present == True:
+        if gt_present:
+            if self.dataset == 'kitti':
+                imgdir = os.path.join(datapath, 'semantic')
+                self.num_classes = 16
+            elif self.dataset == 'CamVid':
+                if mode == 'train':
+                    imgdir = os.path.join(datapath, 'trainannot')
+                elif mode == 'val':
+                    imgdir = os.path.join(datapath, 'valannot')
+                elif mode == 'test':
+                    imgdir = os.path.join(datapath, 'testannot')
+                self.num_classes = 12
+            myids = 0
+            self.myfreqs = np.zeros((self.num_classes,1)).astype('int32') # num of pixels of a particular class/total num of pixels in images in which the class occurs
+            self.numimages = np.zeros((self.num_classes,1)).astype('int32') # no of images in which the class occurs
+            if dataset == 'kitti':
+                myids = getmyids()
+            print('myids: ', myids)
             arr2 = np.arange(self.num_classes)
             for filename in os.listdir(imgdir):
                 i = i + 1
@@ -197,7 +198,6 @@ class getDataset(Dataset):
                 sample = {'image': self.images[i], 'original': self.data_orig[i]}
                 self.samples.append(sample)
         if data_augment == True:
-
             auginds = np.random.randint(0,self.end_idx, size=int(0.20*self.end_idx))
             for i in range(auginds.shape[0]):
                 sample = self.samples[auginds[i]]
@@ -225,9 +225,8 @@ class getDataset(Dataset):
             self.weights = torch.from_numpy(self.weights)
             print('weights: ', self.weights)
         print('self.end_idx: ', self.end_idx)
-        print('len(self.samples): ', len(self.samples))
-        print('self.end_idx + int(0.20*self.end_idx): ', self.end_idx + int(0.20*self.end_idx))
-
+        print('len(self.samples):', len(self.samples))
+        random.shuffle(self.samples)
 
 
     def __getitem__(self, idx):

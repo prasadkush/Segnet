@@ -227,6 +227,8 @@ def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, mod
 			model = SegmentationDil3(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
 		elif modelname == 'SegmentationDil4':
 			model = SegmentationDil4(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil5':
+			model = SegmentationDil5(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
 	if modelpath != None:
 		checkpoint = torch.load(modelpath)
 		model.load_state_dict(checkpoint['model_state_dict'])
@@ -309,6 +311,189 @@ def compute_accuracy(dataset, dataset_name='kitti', imgdir=None, model=None, mod
 		#print('loss: ', loss)
 		return pixelacc, iou, loss, intersect, union
 
+
+alpha = 0.6
+blankcol = (255*np.ones((360,3,3))).astype('uint8')
+
+def predict_segmentation(dataset, model=None, modelname='DilatedTransformer', modelpath=None, resultsdir='results'):
+	if model == None and modelpath == None:
+		raise ModelPathrequiredError("Both model and modelpath are None")
+	elif model == None:
+		if modelname == 'Segnet':
+			model = Segnet(7,3)
+		elif modelname == 'SegnetSkip':
+			model = SegnetSkip(7,3)
+		elif modelname == 'SegnetSkip3':
+			model = SegnetSkip3(7,3)
+		elif modelname == 'SegmentationDil2':
+			model = SegmentationDil2(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil3':
+			model = SegmentationDil3(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil4':
+			model = SegmentationDil4(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil5':
+			model = SegmentationDil5(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'DilatedTransformer':
+			model = SegmentationDil5(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+	if modelpath != None:
+		checkpoint = torch.load(modelpath)
+		model.load_state_dict(checkpoint['model_state_dict'])
+		print('checkpoint[epoch]: ', checkpoint['epoch'])
+		print('checkpoint[loss]: ', checkpoint['loss'])
+		print('checkpoint[mean_iou]: ', checkpoint['mean_iou'])
+	imgh = dataset.imgh
+	imgw = dataset.imgw
+	batch_size = 8
+	loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+	model.eval()
+	color_arr = label_colours
+	total_time = 0
+	total_loss = 0
+	timeimg = 0
+	randi = np.random.randint(0, len(dataset) - batch_size)
+	randi = int(randi/batch_size) 
+	numimgs = 0
+	with torch.no_grad():
+		for i, data in enumerate(loader):
+			img = data['image']
+			dimg = data['original']
+			start = time.time()
+			out = model.forward(img)
+			total_time += time.time() - start
+			#print('timeimg: ', timeimg)
+			inds = torch.argmax(out, dim=1)
+			outimg = np.ones((img.shape[0], 360,480,3))
+			indices = np.indices((img.shape[0], 360,480))
+			outimg[indices[0,:,:,:], indices[1,:,:,:],indices[2,:,:,:],:] = color_arr[inds]
+			outimg = outimg.astype('uint8')
+			imgorig = dimg
+			imgorig = torch.permute(imgorig, (0,2,3,1))
+			imgorig = imgorig.numpy()
+			print('imgorig[0,0:5,0:5,:]: ', imgorig[0,0:5,0:5,:])
+			print('outimg[0,0:5,0:5,:]: ', outimg[0,0:5,0:5,:])
+			imgorig = (255*imgorig).astype('uint8')
+			#imgorig = imgorig.numpy().astype('uint8')
+			print('imgorig[0,0:5,0:5,:]: ', imgorig[0,0:5,0:5,:])
+			for j in range(img.shape[0]):
+				#cv2.imwrite(imgdir + '/segm/' + str(numimgs + j) + '_outimg_' + '.jpg', outimg[j,:,:,:])
+				#cv2.imwrite(imgdir + '/orig/' + str(numimgs + j) + '_imgorig_' + '.jpg', imgorig[j,:,:,:])
+				overimg = cv2.addWeighted(outimg[j,:,:,:], alpha, imgorig[j,:,:,:], 1 - alpha, 0)
+				newimg = np.concatenate((outimg[j,:,:,:], blankcol, imgorig[j,:,:,:], blankcol, overimg),axis=1)
+				cv2.imwrite(resultsdir + '/' + str(numimgs + j) + '.jpg', newimg)
+				cv2.imshow('kitti segmented: ', newimg)
+				cv2.waitKey(0)			
+			numimgs += img.shape[0]
+			#print('intersect: ', intersect)
+			#print('union: ', union)
+	#print('total_time: ', total_time)
+	print('average time: ', total_time/numimgs)
+
+
+
+def predict_segmentation_brightaug(dataset, model=None, modelname='DilatedTransformer', modelpath=None, resultsdir='results', dataset_name='kitti'):
+	if model == None and modelpath == None:
+		raise ModelPathrequiredError("Both model and modelpath are None")
+	elif model == None:
+		if modelname == 'Segnet':
+			model = Segnet(7,3)
+		elif modelname == 'SegnetSkip':
+			model = SegnetSkip(7,3)
+		elif modelname == 'SegnetSkip3':
+			model = SegnetSkip3(7,3)
+		elif modelname == 'SegmentationDil2':
+			model = SegmentationDil2(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil3':
+			model = SegmentationDil3(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil4':
+			model = SegmentationDil4(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'SegmentationDil5':
+			model = SegmentationDil5(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+		elif modelname == 'DilatedTransformer':
+			model = SegmentationDil5(kernel1_size=7, kernel2_size=3, kernel3_size=5, padding=3)
+	if modelpath != None:
+		checkpoint = torch.load(modelpath)
+		model.load_state_dict(checkpoint['model_state_dict'])
+		print('checkpoint[epoch]: ', checkpoint['epoch'])
+		print('checkpoint[loss]: ', checkpoint['loss'])
+		print('checkpoint[mean_iou]: ', checkpoint['mean_iou'])
+	imgh = dataset.imgh
+	imgw = dataset.imgw
+	batch_size = 8
+	loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+	model.eval()
+	color_arr = label_colours
+	total_time = 0
+	total_loss = 0
+	timeimg = 0
+	randi = np.random.randint(0, len(dataset) - batch_size)
+	randi = int(randi/batch_size) 
+	numimgs = 0
+	Normalize = get_color_transform(dataset='CamVid')
+	inv_transform = get_inverse_transforms(dataset='CamVid')
+	with torch.no_grad():
+		for i, data in enumerate(loader):
+			img = data['image']
+			dimg = data['original']
+			for j in range(batch_size):
+				augimage = img[j,:,:,:]
+				augorig = dimg[j,:,:,:]
+				print('max(augimage): ', torch.max(augimage))
+				print('max(augorig): ', torch.max(augorig))
+				brighness_aug = 0.8 + 0.3*torch.rand(1)
+				augimage = inv_transform(augimage)
+				#augimage = (augimage.permute((1,2,0))).numpy()
+				augimage = brighness_aug*augimage
+				color_aug = 0.8 + 0.3*torch.rand((3,1,1))
+				augimage = color_aug*augimage
+				augimage = torch.clip(augimage, min=0, max=1)
+				#augimage = torch.from_numpy(augimage)
+				#augimage = augimage.pemute((2,0,1))
+				augimage = Normalize(augimage)
+				augorig = brighness_aug*augorig
+				augorig = color_aug*augorig
+				augorig = torch.clip(augorig,min=0,max=1)
+				newimg = torch.concatenate((img[j,:,:,:].unsqueeze(0), augimage.unsqueeze(0)), axis=0)
+				start = time.time()
+				out = model.forward(newimg)
+				total_time += time.time() - start
+				#print('timeimg: ', timeimg)
+				out = torch.mean(out, axis=0)
+				#out = torch.max(out, axis = 0)[0]
+				out = out.unsqueeze(0)
+				print('out shape: ', out.shape)
+				inds = torch.argmax(out, dim=1)
+				outimg = np.ones((1, 360,480,3))
+				indices = np.indices((1, 360,480))
+				outimg[indices[0,:,:,:], indices[1,:,:,:],indices[2,:,:,:],:] = color_arr[inds]
+				outimg = outimg.astype('uint8')
+				imgorig = dimg[j,:,:,:].unsqueeze(0)
+				imgorig = torch.permute(imgorig, (0,2,3,1))
+				imgorig = imgorig.numpy()
+				imgaugorig = augorig.unsqueeze(0)
+				imgaugorig = torch.permute(imgaugorig, (0,2,3,1))
+				imgaugorig = imgaugorig.numpy()
+				imgorig = (255*imgorig).astype('uint8')
+				#print('imgorig[0,0:5,0:5,:]: ', imgorig[0,0:5,0:5,:])
+				#print('outimg[0,0:5,0:5,:]: ', outimg[0,0:5,0:5,:])
+				imgaugorig = (255*imgaugorig).astype('uint8')
+				print('outimg shape: ', outimg.shape)
+				print('imgorig shape: ', imgorig.shape)
+				print('imgaugorig shape: ', imgaugorig.shape)
+				#imgorig = imgorig.numpy().astype('uint8')
+				#print('imgorig[0,0:5,0:5,:]: ', imgorig[0,0:5,0:5,:])
+				#for k in range(img.shape[0]):
+					#cv2.imwrite(imgdir + '/segm/' + str(numimgs + j) + '_outimg_' + '.jpg', outimg[j,:,:,:])
+					#cv2.imwrite(imgdir + '/orig/' + str(numimgs + j) + '_imgorig_' + '.jpg', imgorig[j,:,:,:])
+				overimg = cv2.addWeighted(outimg[0,:,:,:], alpha, imgorig[0,:,:,:], 1 - alpha, 0)
+				newimg = np.concatenate((outimg[0,:,:,:], blankcol, imgorig[0,:,:,:], blankcol, overimg, blankcol, imgaugorig[0,:,:,:]),axis=1)
+					#cv2.imwrite(resultsdir + '/' + str(numimgs + j) + '.jpg', newimg)
+				cv2.imshow('kitti segmented: ', newimg)
+				cv2.waitKey(0)			
+				#numimgs += img.shape[0]
+				#print('intersect: ', intersect)
+				#print('union: ', union)
+		#print('total_time: ', total_time)
+		#print('average time: ', total_time/numimgs)
 
 
 

@@ -14,19 +14,54 @@ class PatchEmbeddingLayer(nn.Module):
     def __init__(self, patch_size, in_channels, embedding_dims):
         super(PatchEmbeddingLayer, self).__init__()
         self.ConvLayer = nn.Conv2d(in_channels, embedding_dims, kernel_size=patch_size, stride=patch_size)
-        self.flattenLayer = nn.Flatten(start_dim=1, end_dim=2)
+        self.flattenLayer = nn.Flatten(start_dim=2, end_dim=3)
 
     def forward(self, x):
         out = self.ConvLayer(x)
         out = self.flattenLayer(out)
+        out = out.permute((0,2,1))
         return out
 
 class MLPblock(nn.Module):
     def __init__(self, embedding_dims, hidden_dims):
-        super(MLPBlock, self).__init__()
+        super(MLPblock, self).__init__()
         self.embedding_dims = embedding_dims
         self.hidden_dims = hidden_dims
-        
+        self.layerNorm = nn.LayerNorm(embedding_dims)
+        self.mlplayer = nn.Sequential(nn.Linear(in_features = embedding_dims, out_features = hidden_dims), nn.GELU(),
+            nn.Dropout(p=0.30), nn.Linear(in_features = hidden_dims, out_features = embedding_dims), nn.Dropout(p=0.30))
+
+    def forward(self, x):
+        out = self.layerNorm(x)
+        out = self.mlplayer(out) + out
+        return out
+
+
+class MultiheadSelfAttentionblock(nn.Module):
+    def __init__(self, embedding_dims, num_heads):
+        super(MultiheadSelfAttentionblock, self).__init__()
+        self.embedding_dims = embedding_dims
+        self.num_heads = num_heads
+        self.layernorm = nn.LayerNorm(embedding_dims)
+        self.multiheadattention = nn.MultiheadAttention(embedding_dims, num_heads, batch_first=True)
+
+    def forward(self, x):
+        out = self.layernorm(x)
+        out, _ = self.multiheadattention(out, out, out, need_weights=False)
+        print('out shape after multiheadattention: ', out.shape)
+        out = out + x
+        return out
+
+class Transformerblock(nn.Module):
+    def __init__(self, embedding_dims, hidden_dims, num_heads):
+        super(Transformerblock, self).__init__()
+        self.msablock = MultiheadSelfAttentionblock(embedding_dims, num_heads)
+        self.mlpblock = MLPblock(embedding_dims, hidden_dims)
+
+    def forward(self, x):
+        out = self.msablock(x)
+        out = self.mlpblock(out)
+        return out
 
 class DilationModule(nn.Module):
     def __init__(self, inputfeatures, module_type=1, output7=48, output3=16, output5=16, kernel1_size=7, padding1=3, kernel2_size=3, padding2=2, dilation2=1, kernel3_size=5, padding3=4, dilation3=1):
@@ -218,15 +253,19 @@ class SegmentationDilated(nn.Module):
         super(SegmentationDilated, self).__init__()
         self.layer1 = ConvLayer(3, 64, kernel_size=4, padding=3, dilation=2, output=64, layertype=4)
         self.layer2 = ConvLayer(64, 64, kernel_size=7, padding=3, output=128, layertype=1)
-        self.layer3 = ConvLayer(128, 128, kernel_size=kernel1_size, output=128, layertype=1)
-        self.layer4 = DilationModule(128, module_type=1, output7=128, output3=128, output5=0, kernel1_size=kernel1_size, padding1=3, kernel2_size=3, padding2=2, dilation2=2, kernel3_size=5, padding3=4, dilation3=2)
+        self.layer3 = ConvLayer(128, 128, kernel_size=kernel1_size, output=256, layertype=1)
+        self.layer4 = DilationModule(256, module_type=1, output7=128, output3=128, output5=0, kernel1_size=kernel1_size, padding1=3, kernel2_size=3, padding2=2, dilation2=2, kernel3_size=5, padding3=4, dilation3=2)
         self.layer5 = DilationModule(256, module_type=1, output7=128, output3=128, output5=0, kernel1_size=kernel1_size, padding1=3, kernel2_size=3, padding2=4, dilation2=4, kernel3_size=5, padding3=8, dilation3=4)
         self.layer6 = DilationModule(256, module_type=1, output7=128, output3=128, output5=0, kernel1_size=kernel1_size, padding1=3, kernel2_size=3, padding2=6, dilation2=6, kernel3_size=5, padding3=12, dilation3=6)
         self.layer7 = DilationModule(256, module_type=1, output7=128, output3=128, output5=0, kernel1_size=kernel1_size, padding1=3, kernel2_size=3, padding2=8, dilation2=8, kernel3_size=5, padding3=12, dilation3=8)
-
-        self.layer8 = nn.Sequential(nn.Conv2d(256, 128, 1, stride=1, padding=0), 
-            nn.BatchNorm2d(128), nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None)) 
+        self.embeddinglayer = PatchEmbeddingLayer(3, 256, 512)
+        self.layertransformer = Transformerblock(512, 1024, 16)
+        self.layertransup = nn.Sequential(nn.Conv2d(512, 256, 1, stride=1, padding=0), 
+            nn.BatchNorm2d(256), nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None)) 
+        self.layer8 = nn.Sequential(nn.Conv2d(256, 256, 1, stride=1, padding=0), 
+            nn.BatchNorm2d(256), nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None)) 
         self.upsampleLayer = nn.Upsample(scale_factor=2,mode='bilinear')
+        self.upsampleLayer2 = nn.Upsample(scale_factor=3,mode='bilinear')
         self.poollayer = nn.MaxPool2d(kernel_size = 2, stride = 2, return_indices=True)
         self.unpoollayer = nn.MaxUnpool2d(kernel_size = 2, stride = 2)
         #self.layer = nn.Sequential(nn.ConvTranspose2d(128, 128, 3, stride=2, padding=1, output_padding=1), nn.BatchNorm2d(128), 
@@ -240,10 +279,10 @@ class SegmentationDilated(nn.Module):
         #    nn.BatchNorm2d(128),
            #nn.ReLU())
         #    nn.PReLU(num_parameters=1, init=0.25, device=None, dtype=None))
-        self.layer9 = ConvLayer(128, 128, kernel_size=3, stride=1, padding=1,  output=128, layertype=3, droupout=True)
-        self.layer10 = ConvLayer(128, 64, kernel_size=3, stride=1, padding=1,  output=64, layertype=3, droupout=True)
-        self.layer11 = ConvLayer(64, 64, kernel_size=3, stride=1, padding=1,  output=64, layertype=3, droupout=True)
-        self.ClassifyBlock = ClassifyBlock(64, out_channels)
+        self.layer9 = ConvLayer(256, 256, kernel_size=3, stride=1, padding=1,  output=256, layertype=3, droupout=True)
+        self.layer10 = ConvLayer(256, 256, kernel_size=3, stride=1, padding=1,  output=256, layertype=3, droupout=True)
+        self.layer11 = ConvLayer(256, 256, kernel_size=3, stride=1, padding=1,  output=256, layertype=3, droupout=True)
+        self.ClassifyBlock = ClassifyBlock(256, out_channels)
 
     def forward(self, x):
         outsize0 = x.shape
@@ -266,7 +305,7 @@ class SegmentationDilated(nn.Module):
         #print('time layer 3: ', (end_time - start_time)/8)
         #print('after layer3 out shape: ', out3.shape)
         #start_time = time()
-        out = self.layer4(out3) + torch.repeat_interleave(out3, 2, dim=1)
+        out = self.layer4(out3) + out3
         #end_time = time()
         #print('time layer 4: ', (end_time - start_time)/8)
         #print('after layer4 out shape: ', out.shape) 
@@ -281,13 +320,28 @@ class SegmentationDilated(nn.Module):
         #print('time layer 6: ', (end_time - start_time)/8)       
         #print('after layer6 out shape: ', out.shape) 
         #start_time = time()
-        out = self.layer7(out) + out
+        out7 = self.layer7(out) + out
         #end_time = time()
         #print('time layer 7: ', (end_time - start_time)/8)       
         #print('after layer7 out shape: ', out.shape)
         #start_time = time()
         #out = self.layer7(out)
-        out8 = self.layer8(out) + out3
+        #print('out shape befor PatchEmbeddingLayer: ', out.shape)
+        #out = self.embeddinglayer(out7)
+        #print('out shape before transformer: ', out.shape)
+        #out = self.layertransformer(out)
+        #print('out shape: ', out.shape)
+        #out = self.layertransformer(out)
+        #print('out shape: ', out.shape)
+        #out = out.permute((0,2,1))
+        #print('out shape: ', out.shape)
+        #out = out.unflatten(2, (15,20))
+        #print('out shape: ', out.shape)
+        #out = self.upsampleLayer2(out)
+        #print('out shape: ', out.shape)
+        #out = self.layertransup(out)
+        #print('out shape: ', out.shape)
+        out8 = self.layer8(out + out7) + out3
         #end_time = time()
         #print('time layer 8: ', (end_time - start_time)/8) 
         #print('after layer8 out shape: ', out8.shape)
@@ -301,12 +355,12 @@ class SegmentationDilated(nn.Module):
         #start_time = time()
         #out = self.layer8(out)
         #out = self.layer8(out)    
-        out9 = self.layer9(out) + out2 + self.upsampleLayer(out8)
+        out9 = self.layer9(out) + torch.repeat_interleave(out2, 2, dim=1) + self.upsampleLayer(out8)
         #end_time = time()
         #print('time layer 9: ', (end_time - start_time)/8)
         #print('after layer9 out shape: ', out9.shape)
         #start_time = time()
-        out = self.unpoollayer(out9, inds2, output_size=outsize1) 
+        out = self.unpoollayer(out9, torch.repeat_interleave(inds2, 2, dim=1), output_size=outsize1) 
         #end_time = time()
         #print('time unpool layer: ', (end_time - start_time)/8)
         #print('after unpool layer out shape: ', out.shape)
@@ -314,7 +368,7 @@ class SegmentationDilated(nn.Module):
         #print('after layer6 out shape: ', out.shape)
         #start_time = time()
         #out = self.layer9(out)
-        out = self.layer10(out) + out1 + self.upsampleLayer(out9[:,0::2,:,:])
+        out = self.layer10(out) + torch.repeat_interleave(out1, 4, dim=1) + self.upsampleLayer(out9)
         #end_time = time()
         #print('time layer 10: ', (end_time - start_time)/8) 
         #print('after layer10 out shape: ', out.shape)

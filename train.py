@@ -105,9 +105,9 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
     pixelacc_val_list = []
     meaniou_val_list = []
     loss_val_list = []
-    epochs = 60
+    epochs = 70
     lr_schedule = [lr_initial, 0.01, 0.005, 0.001]
-    lr_milestones = [20, 35, 50, epochs]
+    lr_milestones = [30, 45, 60, epochs]
 
     if resume_training == True and modelpath != None:
         checkpoint = torch.load(modelpath)
@@ -348,7 +348,7 @@ def train(dataset, model, epochs=35, batch_size=4, shuffle=True, testdataset=Fal
             imgs_val = data_val['semantic']
             imgorig_val = data_val['original']
             with torch.no_grad():
-                pixelacc_val, meaniou_val, intersect_val, union_val, val_loss = predict_single_image(img_val, imgs_val, imgorig_val, model=model, modelname='SegmentationDil4', dataset_name='CamVid', criterion=criterion, imgdir=resultsdir + '/imgs', epoch=e)
+                pixelacc_val, meaniou_val, intersect_val, union_val, val_loss = predict_single_image(img_val, imgs_val, imgorig_val, model=model, modelname='SegmentationDil5', dataset_name='CamVid', criterion=criterion, imgdir=resultsdir + '/imgs', epoch=e)
             intersect_union_val = intersect_val/union_val
             print('pixelacc_val: ', pixelacc_val)
             print('meaniou_val: ', meaniou_val)
